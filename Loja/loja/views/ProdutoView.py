@@ -11,8 +11,9 @@ def edit_produto_view(request, id=None):
     print(produto)
     Fabricantes = Fabricante.objects.all()
     Categorias = Categoria.objects.all()
-    context = { 'produto': produto, 'fabricantes' : Fabricantes, 'categorias' : Categorias}
+    context = {'produto': produto, 'fabricantes' : Fabricantes, 'categorias' : Categorias}
     return render(request, template_name='produto/produto-edit.html', context=context, status=200)
+
 def list_produto_view(request, id=None):
     produto = request.GET.get("produto")
     destaque = request.GET.get("destaque")
@@ -38,6 +39,7 @@ def list_produto_view(request, id=None):
     # Adicione para definir o contexto e carregar o template
     context = {'produtos': produtos}
     return render(request, template_name='produto/produto.html', context=context, status=200)
+
 def edit_produto_postback(request, id=None):
     if request.method == 'POST':
         id = request.POST.get("id")
@@ -53,6 +55,7 @@ def edit_produto_postback(request, id=None):
         print(destaque)
         print(promocao)
         print(msgPromocao)
+        
         try:
             obj_produto = Produto.objects.filter(id=id).first()
             obj_produto.Produto = produto
@@ -64,9 +67,19 @@ def edit_produto_postback(request, id=None):
                 obj_produto.msgPromocao = msgPromocao
                 obj_produto.save()
                 print("Produto %s salvo com sucesso" % produto)
+            if request.FILES is not None:
+                num_files = len(request.FILES.getlist('image'))
+                if num_files > 0:
+                    imagefile = request.FILES['image']
+                    print(imagefile)
+                    fs = FileSystemStorage()
+                    filename = fs.save(imagefile.name, imagefile)
+                    if (filename is not None) and (filename != ""):
+                        obj_produto.image = filename
         except Exception as e:
                 print("Erro salvando edição de produto: %s" % e)
     return redirect("/produto")
+
 def details_produto_view(request, id=None):
     # Processa o evento GET gerado pela action
     produtos = Produto.objects.all()
@@ -76,6 +89,7 @@ def details_produto_view(request, id=None):
     print(produto)
     context = {'produto': produto}
     return render(request, template_name='produto/produto-details.html', context=context, status=200)
+
 def delete_produto_view(request, id=None):
     # Processa o evento GET gerado pela action
     produtos = Produto.objects.all()
@@ -83,22 +97,31 @@ def delete_produto_view(request, id=None):
         produtos = produtos.filter(id=id)
     produto = produtos.first()
     print(produto)
-    context = {'produto': produto}
+    Fabricantes = Fabricante.objects.all()
+    Categorias = Categoria.objects.all()
+    context = {'produto': produto, 'fabricantes': Fabricantes, 'categorias': Categorias}
     return render(request, template_name='produto/produto-delete.html', context=context, status=200)
+
 def delete_produto_postback(request, id=None):
 # Processa o post back gerado pela action
     if request.method == 'POST':
     # Salva dados editados
         id = request.POST.get("id")
         produto = request.POST.get("Produto")
+        categoria = request.POST.get("CategoriaFk")
+        fabricante = request.POST.get("FabricanteFk")
         print("postback-delete")
         print(id)
         try:
-            Produto.objects.filter(id=id).delete()
+            obj_produto = Produto.objects.filter(id=id).delete()
+            obj_produto.fabricante = Fabricante.objects.filter(id=fabricante).first()
+            obj_produto.categoria = Categoria.objects.filter(id=categoria).first()
             print("Produto %s excluido com sucesso" % produto)
+
         except Exception as e:
             print("Erro salvando edição de produto: %s" % e)
     return redirect("/produto")
+
 def create_produto_view(request, id=None):
     if request.method == 'POST':
         produto = request.POST.get("Produto")
@@ -107,6 +130,8 @@ def create_produto_view(request, id=None):
         msgPromocao = request.POST.get("msgPromocao")
         preco = request.POST.get("preco")
         image = request.POST.get("image")
+        categoria = request.POST.get("CategoriaFk")
+        fabricante = request.POST.get("FabricanteFk")
         print("postback-create")
         print(produto)
         print(destaque)
@@ -114,6 +139,8 @@ def create_produto_view(request, id=None):
         print(msgPromocao)
         print(preco)
         print(image)
+        print(categoria)
+        print(fabricante)
         try:
             obj_produto = Produto()
             obj_produto.Produto = produto
@@ -126,7 +153,6 @@ def create_produto_view(request, id=None):
                 obj_produto.preco = preco
             obj_produto.criado_em = timezone.now()
             obj_produto.alterado_em = obj_produto.criado_em
-
             if request.FILES is not None:
                 num_files = len(request.FILES.getlist('image'))
                 if num_files > 0:
@@ -136,9 +162,22 @@ def create_produto_view(request, id=None):
                     filename = fs.save(imagefile.name, imagefile)
                     if (filename is not None) and (filename != ""):
                         obj_produto.image = filename
+            if categoria and categoria != '-1':
+                obj_produto.categoria = Categoria.objects.filter(id=categoria).first()
+            else:
+                obj_produto.categoria = None # Definir como None se não selecionado ou -1
+            
+            if fabricante and fabricante != '-1':
+                obj_produto.fabricante = Fabricante.objects.filter(id=fabricante).first()
+            else:
+                obj_produto.fabricante = None # Definir como None se não selecionado ou -1
+
             obj_produto.save()
             print("Produto %s salvo com sucesso" % produto)
         except Exception as e:
             print("Erro inserindo produto: %s" % e)
         return redirect("/produto")
-    return render(request, template_name='produto/produto-create.html',status=200)
+    Fabricantes = Fabricante.objects.all()
+    Categorias = Categoria.objects.all()
+    context = {'fabricantes': Fabricantes, 'categorias': Categorias}
+    return render(request, template_name='produto/produto-create.html', context=context,status=200)
