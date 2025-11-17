@@ -10,4 +10,6 @@ from .Categoria import Categoria
 from .Produto import Produto
 PERFIL = ((1, 'Admin'), (2, 'Usuario'))
 from .Usuario import Usuario
+from .Carrinho import Carrinho
+from .Carrinho import CarrinhoItem
 
